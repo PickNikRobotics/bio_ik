@@ -131,8 +131,8 @@ class PoseGoal : public LinkGoalBase
 
 public:
     PoseGoal()
-        : rotation_scale_(0.5)
-        , frame_(Frame::identity())
+        : frame_(Frame::identity())
+        , rotation_scale_(0.5)
     {
     }
     PoseGoal(const std::string& link_name, const tf2::Vector3& position, const tf2::Quaternion& orientation, double weight = 1.0)
@@ -214,95 +214,95 @@ public:
 
 class MaxDistanceGoal : public LinkGoalBase
 {
-    tf2::Vector3 target;
-    double distance;
+    tf2::Vector3 target_;
+    double distance_;
 
 public:
     MaxDistanceGoal()
-        : target(0, 0, 0)
-        , distance(1)
+        : target_(0, 0, 0)
+        , distance_(1)
     {
     }
     MaxDistanceGoal(const std::string& link_name, const tf2::Vector3& target, double distance, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , target(target)
-        , distance(distance)
+        , target_(target)
+        , distance_(distance)
     {
     }
-    const tf2::Vector3& getTarget() const { return target; }
-    void setTarget(const tf2::Vector3& t) { target = t; }
-    double getDistance() const { return distance; }
-    void setDistance(double d) { distance = d; }
+    const tf2::Vector3& getTarget() const { return target_; }
+    void setTarget(const tf2::Vector3& t) { target_ = t; }
+    double getDistance() const { return distance_; }
+    void setDistance(double d) { distance_ = d; }
     virtual double evaluate(const GoalContext& context) const
     {
         auto& fb = context.getLinkFrame();
-        double d = fmax(0.0, fb.getPosition().distance(target) - distance);
+        double d = fmax(0.0, fb.getPosition().distance(target_) - distance_);
         return d * d;
     }
 };
 
 class MinDistanceGoal : public LinkGoalBase
 {
-    tf2::Vector3 target;
-    double distance;
+    tf2::Vector3 target_;
+    double distance_;
 
 public:
     MinDistanceGoal()
-        : target(0, 0, 0)
-        , distance(1)
+        : target_(0, 0, 0)
+        , distance_(1)
     {
     }
     MinDistanceGoal(const std::string& link_name, const tf2::Vector3& target, double distance, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , target(target)
-        , distance(distance)
+        , target_(target)
+        , distance_(distance)
     {
     }
-    const tf2::Vector3& getTarget() const { return target; }
-    void setTarget(const tf2::Vector3& t) { target = t; }
-    double getDistance() const { return distance; }
-    void setDistance(double d) { distance = d; }
+    const tf2::Vector3& getTarget() const { return target_; }
+    void setTarget(const tf2::Vector3& t) { target_ = t; }
+    double getDistance() const { return distance_; }
+    void setDistance(double d) { distance_ = d; }
     virtual double evaluate(const GoalContext& context) const
     {
         auto& fb = context.getLinkFrame();
-        double d = fmax(0.0, distance - fb.getPosition().distance(target));
+        double d = fmax(0.0, distance_ - fb.getPosition().distance(target_));
         return d * d;
     }
 };
 
 class LineGoal : public LinkGoalBase
 {
-    tf2::Vector3 position;
-    tf2::Vector3 direction;
+    tf2::Vector3 position_;
+    tf2::Vector3 direction_;
 
 public:
     LineGoal()
-        : position(0, 0, 0)
-        , direction(0, 0, 0)
+        : position_(0, 0, 0)
+        , direction_(0, 0, 0)
     {
     }
     LineGoal(const std::string& link_name, const tf2::Vector3& position, const tf2::Vector3& direction, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , position(position)
-        , direction(direction.normalized())
+        , position_(position)
+        , direction_(direction.normalized())
     {
     }
-    const tf2::Vector3& getPosition() const { return position; }
-    void setPosition(const tf2::Vector3& p) { position = p; }
-    const tf2::Vector3& getDirection() const { return direction; }
-    void setDirection(const tf2::Vector3& d) { direction = d.normalized(); }
+    const tf2::Vector3& getPosition() const { return position_; }
+    void setPosition(const tf2::Vector3& p) { position_ = p; }
+    const tf2::Vector3& getDirection() const { return direction_; }
+    void setDirection(const tf2::Vector3& d) { direction_ = d.normalized(); }
     virtual double evaluate(const GoalContext& context) const
     {
         auto& fb = context.getLinkFrame();
-        return position.distance2(fb.getPosition() - direction * direction.dot(fb.getPosition() - position));
+        return position_.distance2(fb.getPosition() - direction_ * direction_.dot(fb.getPosition() - position_));
     }
 };
 
 #if (MOVEIT_FCL_VERSION < FCL_VERSION_CHECK(0, 6, 0))
 class TouchGoal : public LinkGoalBase
 {
-    tf2::Vector3 position;
-    tf2::Vector3 normal;
+    tf2::Vector3 position_;
+    tf2::Vector3 normal_;
     struct CollisionShape
     {
         std::vector<Vector3> vertices;
@@ -332,14 +332,14 @@ class TouchGoal : public LinkGoalBase
 
 public:
     TouchGoal()
-        : position(0, 0, 0)
-        , normal(0, 0, 0)
+        : position_(0, 0, 0)
+        , normal_(0, 0, 0)
     {
     }
     TouchGoal(const std::string& link_name, const tf2::Vector3& position, const tf2::Vector3& normal, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , position(position)
-        , normal(normal.normalized())
+        , position_(position)
+        , normal_(normal.normalized())
     {
     }
     virtual void describe(GoalContext& context) const;
@@ -438,68 +438,68 @@ public:
 
 class JointVariableGoal : public Goal
 {
-    std::string variable_name;
-    double variable_position;
+    std::string variable_name_;
+    double variable_position_;
 
 public:
     JointVariableGoal()
-        : variable_position(0)
+        : variable_position_(0)
     {
     }
     JointVariableGoal(const std::string& variable_name, double variable_position, double weight = 1.0, bool secondary = false)
-        : variable_name(variable_name)
-        , variable_position(variable_position)
+        : variable_name_(variable_name)
+        , variable_position_(variable_position)
     {
         weight_ = weight;
         secondary_ = secondary;
     }
-    double getVariablePosition() const { return variable_position; }
-    void setVariablePosition(double p) { variable_position = p; }
-    const std::string& getVariableName() const { return variable_name; }
-    void setVariableName(const std::string& n) { variable_name = n; }
+    double getVariablePosition() const { return variable_position_; }
+    void setVariablePosition(double p) { variable_position_ = p; }
+    const std::string& getVariableName() const { return variable_name_; }
+    void setVariableName(const std::string& n) { variable_name_ = n; }
     virtual void describe(GoalContext& context) const
     {
         Goal::describe(context);
-        context.addVariable(variable_name);
+        context.addVariable(variable_name_);
     }
     virtual double evaluate(const GoalContext& context) const
     {
-        double d = variable_position - context.getVariablePosition();
+        double d = variable_position_ - context.getVariablePosition();
         return d * d;
     }
 };
 
 class JointFunctionGoal : public Goal
 {
-    std::vector<std::string> variable_names;
-    std::function<void(std::vector<double>&)> function;
+    std::vector<std::string> variable_names_;
+    std::function<void(std::vector<double>&)> function_;
 
 public:
     JointFunctionGoal() {}
     JointFunctionGoal(const std::vector<std::string>& variable_names, const std::function<void(std::vector<double>&)>& function, double weight = 1.0, bool secondary = false)
-        : variable_names(variable_names)
-        , function(function)
+        : variable_names_(variable_names)
+        , function_(function)
     {
         weight_ = weight;
         secondary_ = secondary;
     }
-    void setJointVariableNames(const std::vector<std::string>& n) { variable_names = n; }
-    void setJointVariableFunction(const std::function<void(std::vector<double>&)>& f) { function = f; }
+    void setJointVariableNames(const std::vector<std::string>& n) { variable_names_ = n; }
+    void setJointVariableFunction(const std::function<void(std::vector<double>&)>& f) { function_ = f; }
     virtual void describe(GoalContext& context) const
     {
         Goal::describe(context);
-        for(auto& variable_name : variable_names)
+        for(auto& variable_name : variable_names_)
             context.addVariable(variable_name);
     }
     virtual double evaluate(const GoalContext& context) const
     {
         auto& temp_vector = context.getTempVector();
-        temp_vector.resize(variable_names.size());
-        for(size_t i = 0; i < variable_names.size(); i++)
+        temp_vector.resize(variable_names_.size());
+        for(size_t i = 0; i < variable_names_.size(); i++)
             temp_vector[i] = context.getVariablePosition(i);
-        function(temp_vector);
+        function_(temp_vector);
         double sum = 0.0;
-        for(size_t i = 0; i < variable_names.size(); i++)
+        for(size_t i = 0; i < variable_names_.size(); i++)
         {
             double d = temp_vector[i] - context.getVariablePosition(i);
             sum += d * d;
@@ -540,132 +540,132 @@ public:
 
 class LinkFunctionGoal : public LinkGoalBase
 {
-    std::function<double(const tf2::Vector3&, const tf2::Quaternion&)> function;
+    std::function<double(const tf2::Vector3&, const tf2::Quaternion&)> function_;
 
 public:
     LinkFunctionGoal() {}
     LinkFunctionGoal(const std::string& link_name, const std::function<double(const tf2::Vector3&, const tf2::Quaternion&)>& function, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , function(function)
+        , function_(function)
     {
     }
-    void setLinkFunction(const std::function<double(const tf2::Vector3&, const tf2::Quaternion&)>& f) { function = f; }
-    virtual double evaluate(const GoalContext& context) const { return function(context.getLinkFrame().getPosition(), context.getLinkFrame().getOrientation()); }
+    void setLinkFunction(const std::function<double(const tf2::Vector3&, const tf2::Quaternion&)>& f) { function_ = f; }
+    virtual double evaluate(const GoalContext& context) const { return function_(context.getLinkFrame().getPosition(), context.getLinkFrame().getOrientation()); }
 };
 
 class SideGoal : public LinkGoalBase
 {
-    tf2::Vector3 axis;
-    tf2::Vector3 direction;
+    tf2::Vector3 axis_;
+    tf2::Vector3 direction_;
 
 public:
     SideGoal()
-        : axis(0, 0, 1)
-        , direction(0, 0, 1)
+        : axis_(0, 0, 1)
+        , direction_(0, 0, 1)
     {
     }
     SideGoal(const std::string& link_name, const tf2::Vector3& axis, const tf2::Vector3& direction, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , axis(axis)
-        , direction(direction)
+        , axis_(axis)
+        , direction_(direction)
     {
     }
-    const tf2::Vector3& getAxis() const { return axis; }
-    const tf2::Vector3& getDirection() const { return direction; }
-    void setAxis(const tf2::Vector3& a) { axis = a.normalized(); }
-    void setDirection(const tf2::Vector3& d) { direction = d.normalized(); }
+    const tf2::Vector3& getAxis() const { return axis_; }
+    const tf2::Vector3& getDirection() const { return direction_; }
+    void setAxis(const tf2::Vector3& a) { axis_ = a.normalized(); }
+    void setDirection(const tf2::Vector3& d) { direction_ = d.normalized(); }
     virtual double evaluate(const GoalContext& context) const
     {
         auto& fb = context.getLinkFrame();
         Vector3 v;
-        quat_mul_vec(fb.getOrientation(), axis, v);
-        double f = fmax(0.0, v.dot(direction));
+        quat_mul_vec(fb.getOrientation(), axis_, v);
+        double f = fmax(0.0, v.dot(direction_));
         return f * f;
     }
 };
 
 class DirectionGoal : public LinkGoalBase
 {
-    tf2::Vector3 axis;
-    tf2::Vector3 direction;
+    tf2::Vector3 axis_;
+    tf2::Vector3 direction_;
 
 public:
     DirectionGoal()
-        : axis(0, 0, 1)
-        , direction(0, 0, 1)
+        : axis_(0, 0, 1)
+        , direction_(0, 0, 1)
     {
     }
     DirectionGoal(const std::string& link_name, const tf2::Vector3& axis, const tf2::Vector3& direction, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , axis(axis)
-        , direction(direction)
+        , axis_(axis)
+        , direction_(direction)
     {
     }
-    const tf2::Vector3& getAxis() const { return axis; }
-    const tf2::Vector3& getDirection() const { return direction; }
-    void setAxis(const tf2::Vector3& a) { axis = a.normalized(); }
-    void setDirection(const tf2::Vector3& d) { direction = d.normalized(); }
+    const tf2::Vector3& getAxis() const { return axis_; }
+    const tf2::Vector3& getDirection() const { return direction_; }
+    void setAxis(const tf2::Vector3& a) { axis_ = a.normalized(); }
+    void setDirection(const tf2::Vector3& d) { direction_ = d.normalized(); }
     virtual double evaluate(const GoalContext& context) const
     {
         auto& fb = context.getLinkFrame();
         Vector3 v;
-        quat_mul_vec(fb.getOrientation(), axis, v);
-        return v.distance2(direction);
+        quat_mul_vec(fb.getOrientation(), axis_, v);
+        return v.distance2(direction_);
     }
 };
 
 class ConeGoal : public LinkGoalBase
 {
-    tf2::Vector3 position;
-    double position_weight;
-    tf2::Vector3 axis;
-    tf2::Vector3 direction;
-    double angle;
+    tf2::Vector3 position_;
+    double position_weight_;
+    tf2::Vector3 axis_;
+    tf2::Vector3 direction_;
+    double angle_;
 
 public:
-    const tf2::Vector3& getPosition() const { return position; }
-    double getPositionWeight() const { return position_weight; }
-    const tf2::Vector3& getAxis() const { return axis; }
-    const tf2::Vector3& getDirection() const { return direction; }
-    double getAngle() const { return angle; }
-    void setPosition(const tf2::Vector3& p) { position = p; }
-    void setPositionWeight(double w) { position_weight = w; }
-    void setAxis(const tf2::Vector3& a) { axis = a.normalized(); }
-    void setDirection(const tf2::Vector3& d) { direction = d.normalized(); }
-    void setAngle(double a) { angle = a; }
+    const tf2::Vector3& getPosition() const { return position_; }
+    double getPositionWeight() const { return position_weight_; }
+    const tf2::Vector3& getAxis() const { return axis_; }
+    const tf2::Vector3& getDirection() const { return direction_; }
+    double getAngle() const { return angle_; }
+    void setPosition(const tf2::Vector3& p) { position_ = p; }
+    void setPositionWeight(double w) { position_weight_ = w; }
+    void setAxis(const tf2::Vector3& a) { axis_ = a.normalized(); }
+    void setDirection(const tf2::Vector3& d) { direction_ = d.normalized(); }
+    void setAngle(double a) { angle_ = a; }
     ConeGoal()
-        : position(0, 0, 0)
-        , position_weight(0)
-        , axis(0, 0, 1)
-        , direction(0, 0, 1)
-        , angle(0)
+        : position_(0, 0, 0)
+        , position_weight_(0)
+        , axis_(0, 0, 1)
+        , direction_(0, 0, 1)
+        , angle_(0)
     {
     }
     ConeGoal(const std::string& link_name, const tf2::Vector3& axis, const tf2::Vector3& direction, double angle, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , position(0, 0, 0)
-        , position_weight(0)
-        , axis(axis)
-        , direction(direction)
-        , angle(angle)
+        , position_(0, 0, 0)
+        , position_weight_(0)
+        , axis_(axis)
+        , direction_(direction)
+        , angle_(angle)
     {
     }
     ConeGoal(const std::string& link_name, const tf2::Vector3& position, const tf2::Vector3& axis, const tf2::Vector3& direction, double angle, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , position(position)
-        , position_weight(1)
-        , axis(axis)
-        , direction(direction)
-        , angle(angle)
+        , position_(position)
+        , position_weight_(1)
+        , axis_(axis)
+        , direction_(direction)
+        , angle_(angle)
     {
     }
     ConeGoal(const std::string& link_name, const tf2::Vector3& position, double position_weight, const tf2::Vector3& axis, const tf2::Vector3& direction, double angle, double weight = 1.0)
         : LinkGoalBase(link_name, weight)
-        , position(position)
-        , position_weight(position_weight)
-        , axis(axis)
-        , direction(direction)
-        , angle(angle)
+        , position_(position)
+        , position_weight_(position_weight)
+        , axis_(axis)
+        , direction_(direction)
+        , angle_(angle)
     {
     }
     virtual double evaluate(const GoalContext& context) const
@@ -673,11 +673,11 @@ public:
         double sum = 0.0;
         auto& fb = context.getLinkFrame();
         Vector3 v;
-        quat_mul_vec(fb.getOrientation(), axis, v);
-        double d = fmax(0.0, v.angle(direction) - angle);
+        quat_mul_vec(fb.getOrientation(), axis_, v);
+        double d = fmax(0.0, v.angle(direction_) - angle_);
         sum += d * d;
-        double w = position_weight;
-        sum += w * w * (position - fb.getPosition()).length2();
+        double w = position_weight_;
+        sum += w * w * (position_ - fb.getPosition()).length2();
         return sum;
     }
 };

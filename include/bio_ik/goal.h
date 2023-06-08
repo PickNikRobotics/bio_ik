@@ -67,13 +67,13 @@ protected:
 public:
     GoalContext() {}
     inline const Frame& getLinkFrame(size_t i = 0) const { return tip_link_frames_[goal_link_indices_[i]]; }
-    inline const double getVariablePosition(size_t i = 0) const
+    inline double getVariablePosition(size_t i = 0) const
     {
         auto j = goal_variable_indices_[i];
         if(j >= 0)
-            return active_variable_positions_[j];
+            return active_variable_positions_[static_cast<size_t>(j)];
         else
-            return initial_guess_[-1 - j];
+            return initial_guess_[static_cast<size_t>(-1 - j)];
     }
     inline const Frame& getProblemLinkFrame(size_t i) const { return tip_link_frames_[i]; }
     inline size_t getProblemLinkCount() const { return problem_tip_link_indices_.size(); }
@@ -97,8 +97,8 @@ public:
 class Goal
 {
 protected:
-    bool secondary_;
     double weight_;
+    bool secondary_;
 
 public:
     Goal()
@@ -115,7 +115,7 @@ public:
         context.setSecondary(secondary_);
         context.setWeight(weight_);
     }
-    virtual double evaluate(const GoalContext& context) const { return 0; }
+    virtual double evaluate(const GoalContext& /*context*/) const { return 0; }
 };
 
 struct BioIKKinematicsQueryOptions : kinematics::KinematicsQueryOptions

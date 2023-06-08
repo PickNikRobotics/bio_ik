@@ -78,8 +78,8 @@ public:
 
             bool bounded = bounds.position_bounded_;
 
-            auto* joint_model = model->getJointOfVariable(variables.size());
-            if(auto* revolute = dynamic_cast<const moveit::core::RevoluteJointModel*>(joint_model))
+            auto* joint_model = model->getJointOfVariable(static_cast<int>(variables.size()));
+            if(dynamic_cast<const moveit::core::RevoluteJointModel*>(joint_model))
 
                 if(bounds.max_position_ - bounds.min_position_ >= 2 * M_PI * 0.9999) bounded = false;
 
@@ -91,7 +91,7 @@ public:
 
             info.span = info.max - info.min;
 
-            if(!(info.span >= 0 && info.span < FLT_MAX)) info.span = 1;
+            if(!(info.span >= 0 && info.span < DBL_MAX)) info.span = 1;
 
             info.max_velocity = bounds.max_velocity_;
             info.max_velocity_rcp = info.max_velocity > 0.0 ? 1.0 / info.max_velocity : 0.0;
@@ -101,7 +101,7 @@ public:
 
         for(size_t ivar = 0; ivar < model->getVariableCount(); ivar++)
         {
-            variable_joint_types.push_back(model->getJointOfVariable(ivar)->getType());
+            variable_joint_types.push_back(model->getJointOfVariable(static_cast<int>(ivar))->getType());
         }
     }
 

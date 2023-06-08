@@ -41,11 +41,11 @@ namespace bio_ik
 // (mainly for testing RobotFK_Jacobian::computeJacobian)
 template <class BASE> struct IKJacobianBase : BASE
 {
-    using BASE::modelInfo;
-    using BASE::model;
-    using BASE::params;
+    using BASE::modelInfo_;
+    using BASE::model_;
+    using BASE::params_;
     using BASE::computeFitness;
-    using BASE::problem;
+    using BASE::problem_;
 
     std::vector<Frame> tipObjectives;
 
@@ -71,21 +71,21 @@ template <class BASE> struct IKJacobianBase : BASE
     {
         FNPROFILER();
 
-        int tip_count = problem.tip_link_indices.size();
+        int tip_count = static_cast<int>(problem_.tip_link_indices.size());
         tip_diffs.resize(tip_count * 6);
-        joint_diffs.resize(problem.active_variables.size());
+        joint_diffs.resize(static_cast<Eigen::Index>(problem_.active_variables.size()));
 
         // compute fk
-        model.applyConfiguration(solution);
+        model_.applyConfiguration(solution);
 
         double translational_scale = 1;
         double rotational_scale = 1;
 
         // compute goal diffs
-        tip_frames_temp = model.getTipFrames();
+        tip_frames_temp = model_.getTipFrames();
         for(int itip = 0; itip < tip_count; itip++)
         {
-            auto twist = frameTwist(tip_frames_temp[itip], tipObjectives[itip]);
+            auto twist = frameTwist(tip_frames_temp[static_cast<size_t>(itip)], tipObjectives[static_cast<size_t>(itip)]);
             tip_diffs(itip * 6 + 0) = twist.vel.x() * translational_scale;
             tip_diffs(itip * 6 + 1) = twist.vel.y() * translational_scale;
             tip_diffs(itip * 6 + 2) = twist.vel.z() * translational_scale;
@@ -96,11 +96,10 @@ template <class BASE> struct IKJacobianBase : BASE
 
         // compute jacobian
         {
-            model.computeJacobian(problem.active_variables, jacobian);
-            int icol = 0;
-            for(auto ivar : problem.active_variables)
+            model_.computeJacobian(problem_.active_variables, jacobian);
+            for(Eigen::Index icol = 0; icol < static_cast<Eigen::Index>(problem_.active_variables.size()); icol++)
             {
-                for(size_t itip = 0; itip < tip_count; itip++)
+                for(Eigen::Index itip = 0; itip < static_cast<Eigen::Index>(tip_count); itip++)
                 {
                     jacobian(itip * 6 + 0, icol) *= translational_scale;
                     jacobian(itip * 6 + 1, icol) *= translational_scale;
@@ -109,7 +108,6 @@ template <class BASE> struct IKJacobianBase : BASE
                     jacobian(itip * 6 + 4, icol) *= rotational_scale;
                     jacobian(itip * 6 + 5, icol) *= rotational_scale;
                 }
-                icol++;
             }
         }
 
@@ -120,11 +118,11 @@ template <class BASE> struct IKJacobianBase : BASE
         // apply joint deltas and clip
         {
             int icol = 0;
-            for(auto ivar : problem.active_variables)
+            for(auto ivar : problem_.active_variables)
             {
                 auto v = solution[ivar] + joint_diffs(icol);
                 if(!std::isfinite(v)) continue;
-                v = modelInfo.clip(v, ivar);
+                v = modelInfo_.clip(v, ivar);
                 solution[ivar] = v;
                 icol++;
             }
@@ -147,9 +145,9 @@ template <int if_stuck, size_t threads> struct IKGradientDescent : IKBase
     {
         IKBase::initialize(problem);
         solution = problem.initial_guess;
-        if(thread_index > 0)
+        if(thread_index_ > 0)
             for(auto& vi : problem.active_variables)
-                solution[vi] = random(modelInfo.getMin(vi), modelInfo.getMax(vi));
+                solution[vi] = random(modelInfo_.getMin(vi), modelInfo_.getMax(vi));
         best_solution = solution;
         reset = false;
     }
@@ -162,15 +160,15 @@ template <int if_stuck, size_t threads> struct IKGradientDescent : IKBase
         if(reset)
         {
             reset = false;
-            for(auto& vi : problem.active_variables)
-                solution[vi] = random(modelInfo.getMin(vi), modelInfo.getMax(vi));
+            for(auto& vi : problem_.active_variables)
+                solution[vi] = random(modelInfo_.getMin(vi), modelInfo_.getMax(vi));
         }
 
         // compute gradient direction
         temp = solution;
         double jd = 0.0001;
         gradient.resize(solution.size(), 0);
-        for(auto ivar : problem.active_variables)
+        for(auto ivar : problem_.active_variables)
         {
             temp[ivar] = solution[ivar] - jd;
             double p1 = computeFitness(temp);
@@ -185,23 +183,23 @@ template <int if_stuck, size_t threads> struct IKGradientDescent : IKBase
 
         // normalize gradient direction
         double sum = 0.0001;
-        for(auto ivar : problem.active_variables)
+        for(auto ivar : problem_.active_variables)
             sum += fabs(gradient[ivar]);
         double f = 1.0 / sum * jd;
-        for(auto ivar : problem.active_variables)
+        for(auto ivar : problem_.active_variables)
             gradient[ivar] *= f;
 
         // initialize line search
         temp = solution;
 
-        for(auto ivar : problem.active_variables)
+        for(auto ivar : problem_.active_variables)
             temp[ivar] = solution[ivar] - gradient[ivar];
         double p1 = computeFitness(temp);
 
         // for(auto ivar : problem.active_variables) temp[ivar] = solution[ivar];
         // double p2 = computeFitness(temp);
 
-        for(auto ivar : problem.active_variables)
+        for(auto ivar : problem_.active_variables)
             temp[ivar] = solution[ivar] + gradient[ivar];
         double p3 = computeFitness(temp);
 
@@ -217,8 +215,8 @@ template <int if_stuck, size_t threads> struct IKGradientDescent : IKBase
 
         // apply optimization step
         // (move along gradient direction by estimated step size)
-        for(auto ivar : problem.active_variables)
-            temp[ivar] = modelInfo.clip(solution[ivar] - gradient[ivar] * joint_diff, ivar);
+        for(auto ivar : problem_.active_variables)
+            temp[ivar] = modelInfo_.clip(solution[ivar] - gradient[ivar] * joint_diff, ivar);
 
         if(if_stuck == 'c')
         {
@@ -278,9 +276,9 @@ template <size_t threads> struct IKJacobian : IKJacobianBase<IKBase>
     {
         IKJacobianBase<IKBase>::initialize(problem);
         solution = problem.initial_guess;
-        if(thread_index > 0)
+        if(thread_index_ > 0)
             for(auto& vi : problem.active_variables)
-                solution[vi] = random(modelInfo.getMin(vi), modelInfo.getMax(vi));
+                solution[vi] = random(modelInfo_.getMin(vi), modelInfo_.getMax(vi));
     }
     const std::vector<double>& getSolution() const { return solution; }
     void step() { optimizeJacobian(solution); }

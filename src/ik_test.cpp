@@ -71,10 +71,10 @@ struct IKTest : IKBase
         IKBase::initialize(problem);
 
         fkref.initialize(problem.tip_link_indices);
-        model.initialize(problem.tip_link_indices);
+        model_.initialize(problem.tip_link_indices);
 
         fkref.applyConfiguration(problem.initial_guess);
-        model.applyConfiguration(problem.initial_guess);
+        model_.applyConfiguration(problem.initial_guess);
 
         // double diff = tipdiff(fkref.getTipFrames(), model.getTipFrames());
         // LOG_VAR(diff);
@@ -92,13 +92,13 @@ struct IKTest : IKBase
         {
             temp = problem.initial_guess;
             for(size_t ivar : problem.active_variables)
-                if(modelInfo.isRevolute(ivar) || modelInfo.isPrismatic(ivar)) temp[ivar] = modelInfo.clip(temp[ivar] + random(-0.1, 0.1), ivar);
+                if(modelInfo_.isRevolute(ivar) || modelInfo_.isPrismatic(ivar)) temp[ivar] = modelInfo_.clip(temp[ivar] + random(-0.1, 0.1), ivar);
 
             fkref.applyConfiguration(temp);
             auto& fa = fkref.getTipFrames();
 
-            model.applyConfiguration(problem.initial_guess);
-            model.initializeMutationApproximator(problem.active_variables);
+            model_.applyConfiguration(problem.initial_guess);
+            model_.initializeMutationApproximator(problem.active_variables);
 
             std::vector<aligned_vector<Frame>> fbm;
 
@@ -107,7 +107,7 @@ struct IKTest : IKBase
                 mutation_values.push_back(temp[ivar]);
             const double* mutation_ptr = mutation_values.data();
 
-            model.computeApproximateMutations(1, &mutation_ptr, fbm);
+            model_.computeApproximateMutations(1, &mutation_ptr, fbm);
 
             auto& fb = fbm[0];
 
@@ -130,7 +130,7 @@ struct IKTest : IKBase
 
     void step() {}
 
-    const std::vector<double>& getSolution() const { return problem.initial_guess; }
+    const std::vector<double>& getSolution() const { return problem_.initial_guess; }
 };
 
 static IKFactory::Class<IKTest> test("test");

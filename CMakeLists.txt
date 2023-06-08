@@ -1,10 +1,28 @@
 cmake_minimum_required(VERSION 3.15)
 project(bio_ik)
 
-if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-  message("${PROJECT_NAME}: You did not request a specific build type: Choosing 'Release' for maximum performance")
-  set(CMAKE_BUILD_TYPE Release)
+
+include(cmake/StandardProjectSettings.cmake)
+
+add_library(project_options INTERFACE)
+target_compile_features(project_options INTERFACE cxx_std_17)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+  option(ENABLE_BUILD_WITH_TIME_TRACE "Enable -ftime-trace to generate time tracing .json files on clang" OFF)
+  if(ENABLE_BUILD_WITH_TIME_TRACE)
+    target_compile_options(project_options INTERFACE -ftime-trace)
+  endif()
 endif()
+
+add_library(project_warnings INTERFACE)
+
+# Add linker configuration
+include(cmake/Linker.cmake)
+configure_linker(project_options)
+
+# standard compiler warnings
+include(cmake/CompilerWarnings.cmake)
+set_project_warnings(project_warnings)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
@@ -116,6 +134,9 @@ ament_target_dependencies(
 
 target_link_libraries(
   ${PROJECT_NAME}
+  PRIVATE
+    project_options
+    project_warnings
   PUBLIC
   ${FANN_LIBRARIES}
   ${OpenMP_LIBS}
@@ -137,6 +158,8 @@ target_include_directories(${PROJECT_NAME}_plugin PUBLIC
 target_link_libraries(
   ${PROJECT_NAME}_plugin
   PRIVATE
+    project_options
+    project_warnings
     ${PROJECT_NAME}
 )
 

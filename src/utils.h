@@ -46,11 +46,6 @@
 
 #include <malloc.h>
 #include <stdlib.h>
-
-//#include <link.h>
-
-//#include <boost/align/aligned_allocator.hpp>
-//#include <Eigen/Eigen>
 #include <moveit/robot_model/robot_model.h>
 
 namespace bio_ik
@@ -64,8 +59,8 @@ struct IKParams
     // IKParallel parameters
     std::string solver_class_name;
     bool enable_counter;
-    int thread_count;
-    int random_seed;
+    size_t thread_count;
+    uint64_t random_seed;
 
     //Problem parameters
     double dpos;
@@ -74,8 +69,8 @@ struct IKParams
 
     // ik_evolution_1 parameters
     bool opt_no_wipeout;
-    int population_size;
-    int elite_count;
+    size_t population_size;
+    size_t elite_count;
     bool linear_fitness;
 };
 
@@ -96,7 +91,7 @@ template <class T, class... AA> inline void vprint(std::ostream& s, const T& a, 
 {
     s << a << " ";
     vprint(s, aa...);
-};
+}
 
 #define LOG2(...) vprint(LOG_STREAM, "ikbio ", __VA_ARGS__)
 
@@ -327,7 +322,7 @@ __attribute__((always_inline)) inline double clamp2(double v, double lo, double 
     return v;
 }
 
-__attribute__((always_inline)) inline double smoothstep(float a, float b, float v)
+__attribute__((always_inline)) inline double smoothstep(double a, double b, double v)
 {
     v = clamp((v - a) / (b - a), 0.0, 1.0);
     return v * v * (3.0 - 2.0 * v);
@@ -342,8 +337,8 @@ __attribute__((always_inline)) inline double sign(double f)
 
 template <class t> class linear_int_distribution
 {
-    std::uniform_int_distribution<t> base;
     t n;
+    std::uniform_int_distribution<t> base;
 
 public:
     inline linear_int_distribution(t vrange)
@@ -403,6 +398,7 @@ template <class BASE, class... ARGS> class Factory
             : type(typeid(void))
         {
         }
+        virtual ~ClassBase() = default;
     };
     typedef std::set<ClassBase*> MapType;
     static MapType& classes()
@@ -415,25 +411,28 @@ public:
     template <class DERIVED> struct Class : ClassBase
     {
         BASE* create(ARGS... args) const { return new DERIVED(args...); }
-        BASE* clone(const BASE* o) const { return new DERIVED(*(const DERIVED*)o); }
-        Class(const std::string& name)
+        BASE* clone(const BASE* o) const { return new DERIVED(*dynamic_cast<const DERIVED*>(o)); }
+        Class(const std::string& class_name)
         {
-            this->name = name;
+            // TODO(wyattrees): is the member name "name" important or can change to "name_"?
+            this->name = class_name;
             this->type = typeid(DERIVED);
             classes().insert(this);
         }
         ~Class() { classes().erase(this); }
     };
-    static BASE* create(const std::string& name, ARGS... args)
+
+    static BASE* create(const std::string& class_name, ARGS... args)
     {
+        // TODO(wyattrees): is the member name "name" important or can change to "name_"?
         for(auto* f : classes())
-            if(f->name == name) return f->create(args...);
-        ERROR("class not found", name);
+            if(f->name == class_name) return f->create(args...);
+        ERROR("class not found", class_name);
     }
     template <class DERIVED> static DERIVED* clone(const DERIVED* o)
     {
         for(auto* f : classes())
-            if(f->type == typeid(*o)) return (DERIVED*)f->clone(o);
+            if(f->type == typeid(*o)) return dynamic_cast<DERIVED*>(f->clone(o));
         ERROR("class not found", typeid(*o).name());
     }
 };
@@ -448,13 +447,13 @@ template <class T, size_t A> struct aligned_allocator : public std::allocator<T>
     typedef T& reference;
     typedef const T& const_reference;
     typedef T value_type;
-    T* allocate(size_t s, const void* hint = 0)
+    T* allocate(size_t s, const void* /*hint*/ = 0)
     {
         void* p;
         if(posix_memalign(&p, A, sizeof(T) * s + 64)) throw std::bad_alloc();
-        return (T*)p;
+        return static_cast<T*>(p);
     }
-    void deallocate(T* ptr, size_t s) { free(ptr); }
+    void deallocate(T* ptr, size_t /*unused*/) { free(ptr); }
     template <class U> struct rebind
     {
         typedef aligned_allocator<U, A> other;
