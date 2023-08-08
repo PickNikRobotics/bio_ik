@@ -363,7 +363,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
       int test;
   };*/
 
-  bool
+  virtual bool
   searchPositionIK(const std::vector<geometry_msgs::msg::Pose>& ik_poses, const std::vector<double>& ik_seed_state,
                    double timeout, const std::vector<double>& consistency_limits, std::vector<double>& solution,
                    const IKCallbackFn& solution_callback, const IKCostFn& cost_function,
