@@ -1,0 +1,56 @@
+bio_ik:
+  mode:
+    type: string
+    default_value: "bio2_memetic"
+  profiler:
+    type: bool
+    default_value: false
+  counter:
+    type: bool
+    default_value: false
+  threads:
+    type: int
+    default_value: 0
+  random_seed:
+    type: int
+    default_value: 0
+    description: "The default value of 0 results in seeding random with std::random_device"
+  dpos:
+    type: double
+    default_value: .inf
+  drot:
+    type: double
+    default_value: .inf
+  dtwist:
+    type: double
+    default_value: 0.00001
+  no_wipeout:
+    type: bool
+    default_value: false
+  population_size:
+    type: int
+    default_value: 8
+  elite_count:
+    type: int
+    default_value: 4
+  linear_fitness:
+    type: bool
+    default_value: false
+  rotation_scale:
+    type: double
+    default_value: 0.5
+  position_only_ik:
+    type: bool
+    default_value: false
+  center_joints_weight:
+    type: double
+    default_value: 0
+  avoid_joint_limits_weight:
+    type: double
+    default_value: 0
+  minimal_displacement_weight:
+    type: double
+    default_value: 0
+
+
+

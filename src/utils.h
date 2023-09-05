@@ -53,6 +53,8 @@
 //#include <Eigen/Eigen>
 #include <moveit/robot_model/robot_model.h>
 
+#include "bio_ik_parameters.hpp"
+
 namespace bio_ik
 {
 
@@ -61,22 +63,8 @@ struct IKParams
     moveit::core::RobotModelConstPtr robot_model;
     const moveit::core::JointModelGroup* joint_model_group;
 
-    // IKParallel parameters
-    std::string solver_class_name;
-    bool enable_counter;
-    int thread_count;
-    int random_seed;
-
-    //Problem parameters
-    double dpos;
-    double drot;
-    double dtwist;
-
-    // ik_evolution_1 parameters
-    bool opt_no_wipeout;
-    int population_size;
-    int elite_count;
-    bool linear_fitness;
+    // ROS Parameters
+    Params ros_params;
 };
 
 // Uncomment to enable logging

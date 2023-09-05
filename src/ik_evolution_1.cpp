@@ -132,10 +132,10 @@ struct IKEvolution1 : IKBase
 
     void setParams(const IKParams& p)
     {
-        opt_no_wipeout = p.opt_no_wipeout;
-        populationSize = p.population_size;
-        eliteCount = p.elite_count;
-        linear_fitness = p.linear_fitness;
+        opt_no_wipeout = p.ros_params.no_wipeout;
+        populationSize = p.ros_params.population_size;
+        eliteCount = p.ros_params.elite_count;
+        linear_fitness = p.ros_params.linear_fitness;
     }
 
     bool in_final_adjustment_loop;

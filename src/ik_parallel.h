@@ -111,15 +111,15 @@ struct IKParallel
         : params(params)
     {
         // solver class name
-        std::string name = params.solver_class_name;
+        std::string name = params.ros_params.mode;
 
-        enable_counter = params.enable_counter;
+        enable_counter = params.ros_params.counter;
 
         // create solvers
         solvers.emplace_back(IKFactory::create(name, params));
         thread_count = solvers.front()->concurrency();
-        if(params.thread_count) {
-            thread_count = params.thread_count;
+        if(params.ros_params.threads != 0) {
+            thread_count = params.ros_params.threads;
         }
         while(solvers.size() < thread_count)
             solvers.emplace_back(IKFactory::clone(solvers.front().get()));

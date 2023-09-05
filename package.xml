@@ -14,15 +14,16 @@
 
     <buildtool_depend>ament_cmake_ros</buildtool_depend>
 
-    <depend>moveit_core</depend>
-    <depend>pluginlib</depend>
     <depend>eigen</depend>
+    <depend>generate_parameter_library</depend>
+    <depend>moveit_core</depend>
     <depend>moveit_ros_planning</depend>
+    <depend>pluginlib</depend>
     <depend>rclcpp</depend>
     <depend>tf2</depend>
     <depend>tf2_eigen</depend>
-    <depend>tf2_kdl</depend>
     <depend>tf2_geometry_msgs</depend>
+    <depend>tf2_kdl</depend>
 
     <test_depend>ament_cmake_gtest</test_depend>
 

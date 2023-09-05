@@ -19,11 +19,16 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   tf2_ros
   tf2_kdl
   tf2_geometry_msgs
+  generate_parameter_library
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
+
+generate_parameter_library(bio_ik_parameters
+  src/bio_ik_parameters.yaml
+)
 
 find_package(OpenMP)
 # the specific flag is not yet present in cmake 2.8.12
@@ -119,6 +124,7 @@ target_link_libraries(
   PUBLIC
   ${FANN_LIBRARIES}
   ${OpenMP_LIBS}
+  bio_ik_parameters
 
   -static-libgcc
   -static-libstdc++
@@ -146,7 +152,7 @@ install(
   DESTINATION include
 )
 install(
-  TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_plugin
+  TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_plugin bio_ik_parameters
   EXPORT export_${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

@@ -114,9 +114,8 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
   mutable std::unique_ptr<moveit::core::RobotState> temp_state;
   mutable std::vector<Frame> tipFrames;
   RobotInfo robot_info;
-  bool enable_profiler;
 
-  BioIKKinematicsPlugin() { enable_profiler = false; }
+  BioIKKinematicsPlugin() { ikparams.ros_params.profiler = false; }
 
   virtual const std::vector<std::string> &getJointNames() const {
     LOG_FNC();
@@ -152,26 +151,19 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
 
   mutable std::vector<const bio_ik::Goal *> all_goals;
 
+  std::shared_ptr<bio_ik::ParamListener> param_listener;
   IKParams ikparams;
 
   mutable Problem problem;
-
-  template <class T>
-  void getRosParam(const std::string &param, T &val, const T &default_val)
-  {
-    const std::string prefix = "robot_description_kinematics." + group_name_ + ".";
-    if (!node_->has_parameter(prefix + param))
-    {
-      val = node_->declare_parameter(prefix + param, rclcpp::ParameterValue{default_val}).get<T>();
-      return;
-    }
-    val = node_->get_parameter(prefix + param).get_value<T>();
-  }
 
   bool load(std::string group_name) {
     LOG_FNC();
 
     LOG("bio ik init", node_->getName());
+
+    // Declare/get ros parameters
+    param_listener = std::make_shared<bio_ik::ParamListener>(node_);
+    ikparams.ros_params = param_listener->get_params();
 
     joint_model_group = robot_model_->getJointModelGroup(group_name);
     if (!joint_model_group) {
@@ -194,32 +186,15 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
 
     link_names = tip_frames_;
 
-    // bool enable_profiler;
-    getRosParam("profiler", enable_profiler, false);
-    // if(enable_profiler) Profiler::start();
-
     robot_info = RobotInfo(robot_model_);
 
     ikparams.robot_model = robot_model_;
     ikparams.joint_model_group = joint_model_group;
 
     // initialize parameters for IKParallel
-    getRosParam("mode", ikparams.solver_class_name,
-                std::string("bio2_memetic"));
-    getRosParam("counter", ikparams.enable_counter, false);
-    getRosParam("threads", ikparams.thread_count, 0);
-    getRosParam("random_seed", ikparams.random_seed, static_cast<int>(std::random_device()()));
-
-    // initialize parameters for Problem
-    getRosParam("dpos", ikparams.dpos, DBL_MAX);
-    getRosParam("drot", ikparams.drot, DBL_MAX);
-    getRosParam("dtwist", ikparams.dtwist, 1e-5);
-
-    // initialize parameters for ik_evolution_1
-    getRosParam("no_wipeout", ikparams.opt_no_wipeout, false);
-    getRosParam("population_size", ikparams.population_size, 8);
-    getRosParam("elite_count", ikparams.elite_count, 4);
-    getRosParam("linear_fitness", ikparams.linear_fitness, false);
+    if (ikparams.ros_params.random_seed == 0) {
+      ikparams.ros_params.random_seed = static_cast<int>(std::random_device()());
+    }
 
     temp_state.reset(new moveit::core::RobotState(robot_model_));
 
@@ -238,12 +213,9 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
 
         // LOG_VAR(goal->link_name);
 
-        double rotation_scale = 0.5;
+        double rotation_scale = ikparams.ros_params.rotation_scale;
+        bool position_only_ik = ikparams.ros_params.position_only_ik;
 
-        getRosParam("rotation_scale", rotation_scale, rotation_scale);
-
-        bool position_only_ik = false;
-        getRosParam("position_only_ik", position_only_ik, position_only_ik);
         if (position_only_ik)
           rotation_scale = 0;
 
@@ -253,8 +225,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
       }
 
       {
-        double weight = 0;
-        getRosParam("center_joints_weight", weight, weight);
+        double weight = ikparams.ros_params.center_joints_weight;
         if (weight > 0.0) {
           auto *center_joints_goal = new bio_ik::CenterJointsGoal();
           center_joints_goal->setWeight(weight);
@@ -263,8 +234,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
       }
 
       {
-        double weight = 0;
-        getRosParam("avoid_joint_limits_weight", weight, weight);
+        double weight = ikparams.ros_params.avoid_joint_limits_weight;
         if (weight > 0.0) {
           auto *avoid_joint_limits_goal = new bio_ik::AvoidJointLimitsGoal();
           avoid_joint_limits_goal->setWeight(weight);
@@ -273,8 +243,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
       }
 
       {
-        double weight = 0;
-        getRosParam("minimal_displacement_weight", weight, weight);
+        double weight = ikparams.ros_params.minimal_displacement_weight;
         if (weight > 0.0) {
           auto *minimal_displacement_goal =
               new bio_ik::MinimalDisplacementGoal();
@@ -396,7 +365,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
                    const moveit::core::RobotState *context_state = NULL) const {
     std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> t0 = std::chrono::system_clock::now();
 
-    if (enable_profiler)
+    if (ikparams.ros_params.profiler)
       Profiler::start();
 
     auto *bio_ik_options = toBioIKKinematicsQueryOptions(&options);

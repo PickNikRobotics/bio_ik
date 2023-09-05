@@ -142,7 +142,7 @@ struct IKBase : Random
     virtual void setParams(const IKParams& p) {}
 
     IKBase(const IKParams& p)
-        : Random(p.random_seed)
+        : Random(p.ros_params.random_seed)
         , model(p.robot_model)
         , modelInfo(p.robot_model)
         , params(p)
