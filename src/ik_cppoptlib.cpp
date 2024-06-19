@@ -104,7 +104,7 @@ struct IKOptLibProblem : cppoptlib::BoundedProblem<double>
     bool callback(const cppoptlib::Criteria<double>& state, const TVector& x)
     {
         // check ik timeout
-        return ros::WallTime::now().toSec() < ik->problem.timeout;
+        return std::chrono::system_clock::now() < ik->problem.timeout;
     }
 };
 
