@@ -221,6 +221,13 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
     getRosParam("elite_count", ikparams.elite_count, 4);
     getRosParam("linear_fitness", ikparams.linear_fitness, false);
 
+    // parameters for bio2
+    getRosParam("population_size2", ikparams.population_size2, 2);
+    getRosParam("child_count", ikparams.child_count, 16);
+    getRosParam("species_count", ikparams.species_count, 2);
+    getRosParam("memetic_evolution_gens", ikparams.memetic_evolution_gens, 8);
+    getRosParam("memetic_opt_gens", ikparams.memetic_opt_gens, 8);
+
     temp_state.reset(new moveit::core::RobotState(robot_model_));
 
     ik.reset(new IKParallel(ikparams));

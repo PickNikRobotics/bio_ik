@@ -77,6 +77,13 @@ struct IKParams
     int population_size;
     int elite_count;
     bool linear_fitness;
+
+    // bio2 parameters
+    int population_size2;
+    int child_count;
+    int species_count;
+    int memetic_evolution_gens;
+    int memetic_opt_gens;
 };
 
 // Uncomment to enable logging

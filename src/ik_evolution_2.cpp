@@ -71,10 +71,13 @@ template <int memetic> struct IKEvolution2 : IKBase
     std::vector<size_t> quaternion_genes;
     aligned_vector<double> genes_min, genes_max, genes_span;
     aligned_vector<double> gradient, temp;
+    size_t memetic_evolution_gens, evolution_gens, memetic_opt_gens;
+    size_t population_size, child_count, species_count;
 
     IKEvolution2(const IKParams& p)
         : IKBase(p)
     {
+        setParams(p);
     }
 
 #ifdef ENABLE_CPP_OPTLIB
@@ -108,6 +111,14 @@ template <int memetic> struct IKEvolution2 : IKBase
 
     const std::vector<double>& getSolution() const { return solution; }
 
+    void setParams(const IKParams& p) override {
+        population_size = p.population_size2;
+        child_count = p.child_count;
+        species_count = p.species_count;
+        memetic_opt_gens = p.memetic_opt_gens;
+        memetic_evolution_gens = p.memetic_evolution_gens;
+    }
+
     void initialize(const Problem& problem)
     {
         BLOCKPROFILER("initialization");
@@ -133,12 +144,8 @@ template <int memetic> struct IKEvolution2 : IKBase
         // init temporary buffer with positions of inactive joints
         temp_joint_variables = initial_guess;
 
-        // params
-        size_t population_size = 2;
-        size_t child_count = 16;
-
         // initialize population on current island
-        species.resize(2);
+        species.resize(species_count);
         for(auto& s : species)
         {
             // create individuals
@@ -347,7 +354,7 @@ template <int memetic> struct IKEvolution2 : IKBase
 
                 // run evolution for a few generations
                 size_t generation_count = 16;
-                if(memetic) generation_count = 8;
+                if(memetic) generation_count = memetic_evolution_gens;
                 for(size_t generation = 0; generation < generation_count; generation++)
                 {
                     // BLOCKPROFILER("evolution");
@@ -450,7 +457,7 @@ template <int memetic> struct IKEvolution2 : IKBase
                     double dp = 0.0000001;
                     if(fast_random() < 0.5) dp = -dp;
 
-                    for(size_t generation = 0; generation < 8; generation++)
+                    for(size_t generation = 0; generation < memetic_opt_gens; generation++)
                     // for(size_t generation = 0; generation < 32; generation++)
                     {
 
