@@ -72,7 +72,7 @@ template <int memetic> struct IKEvolution2 : IKBase
     aligned_vector<double> genes_min, genes_max, genes_span;
     aligned_vector<double> gradient, temp;
     size_t memetic_evolution_gens, evolution_gens, memetic_opt_gens;
-    size_t population_size, child_count, species_count;
+    size_t population_size, child_count, species_count, elite_count;
 
     IKEvolution2(const IKParams& p)
         : IKBase(p)
@@ -117,6 +117,7 @@ template <int memetic> struct IKEvolution2 : IKBase
         species_count = p.species_count;
         memetic_opt_gens = p.memetic_opt_gens;
         memetic_evolution_gens = p.memetic_evolution_gens;
+        elite_count = std::min(p.elite_count2, p.population_size2);
     }
 
     void initialize(const Problem& problem)
@@ -270,6 +271,7 @@ template <int memetic> struct IKEvolution2 : IKBase
         for(size_t child_index = population.size(); child_index < children.size(); child_index++)
         {
             double mutation_rate = (1 << fast_random_index(16)) * (1.0 / (1 << 23));
+            // todo(timon): this is using fixed parents
             auto& parent = population[0];
             auto& parent2 = population[1];
             double fmix = (child_index % 2 == 0) * 0.2;
@@ -445,132 +447,128 @@ template <int memetic> struct IKEvolution2 : IKBase
 
                 if(memetic == 'q' || memetic == 'l')
                 {
+                    for (int elite_i = 0; elite_i < elite_count; ++elite_i) {
+                        // init
+                        auto &individual = population[elite_i];
+                        gradient.resize(problem.active_variables.size());
+                        if (genotypes.empty()) genotypes.emplace_back();
+                        phenotypes2.resize(1);
+                        phenotypes3.resize(1);
 
-                    // init
-                    auto& individual = population[0];
-                    gradient.resize(problem.active_variables.size());
-                    if(genotypes.empty()) genotypes.emplace_back();
-                    phenotypes2.resize(1);
-                    phenotypes3.resize(1);
+                        // differentiation step size
+                        double dp = 0.0000001;
+                        if (fast_random() < 0.5) dp = -dp;
 
-                    // differentiation step size
-                    double dp = 0.0000001;
-                    if(fast_random() < 0.5) dp = -dp;
-
-                    for(size_t generation = 0; generation < memetic_opt_gens; generation++)
-                    // for(size_t generation = 0; generation < 32; generation++)
-                    {
-
-                        if(canceled) break;
-
-                        // compute gradient
-                        temp = individual.genes;
-                        genotypes[0] = temp.data();
-                        model.computeApproximateMutations(1, genotypes.data(), phenotypes2);
-                        double f2p = computeFitnessActiveVariables(phenotypes2[0], genotypes[0]);
-                        double fa = f2p + computeSecondaryFitnessActiveVariables(genotypes[0]);
-                        for(size_t i = 0; i < problem.active_variables.size(); i++)
-                        {
-                            double* pp = &(genotypes[0][i]);
-                            genotypes[0][i] = individual.genes[i] + dp;
-                            model.computeApproximateMutation1(problem.active_variables[i], +dp, phenotypes2[0], phenotypes3[0]);
-                            double fb = computeCombinedFitnessActiveVariables(phenotypes3[0], genotypes[0]);
-                            genotypes[0][i] = individual.genes[i];
-                            double d = fb - fa;
-                            gradient[i] = d;
-                        }
-
-                        // normalize gradient
-                        double sum = dp * dp;
-                        for(size_t i = 0; i < problem.active_variables.size(); i++)
-                            sum += fabs(gradient[i]);
-                        double f = 1.0 / sum * dp;
-                        for(size_t i = 0; i < problem.active_variables.size(); i++)
-                            gradient[i] *= f;
-
-                        // sample support points for line search
-                        for(size_t i = 0; i < problem.active_variables.size(); i++)
-                            genotypes[0][i] = individual.genes[i] - gradient[i];
-                        model.computeApproximateMutations(1, genotypes.data(), phenotypes3);
-                        double f1 = computeCombinedFitnessActiveVariables(phenotypes3[0], genotypes[0]);
-
-                        double f2 = fa;
-
-                        for(size_t i = 0; i < problem.active_variables.size(); i++)
-                            genotypes[0][i] = individual.genes[i] + gradient[i];
-                        model.computeApproximateMutations(1, genotypes.data(), phenotypes3);
-                        double f3 = computeCombinedFitnessActiveVariables(phenotypes3[0], genotypes[0]);
-
-                        // quadratic step size
-                        if(memetic == 'q')
+                        for (size_t generation = 0; generation < memetic_opt_gens; generation++)
+                            // for(size_t generation = 0; generation < 32; generation++)
                         {
 
-                            // compute step size
-                            double v1 = (f2 - f1); // f / j
-                            double v2 = (f3 - f2); // f / j
-                            double v = (v1 + v2) * 0.5; // f / j
-                            double a = (v1 - v2); // f / j^2
-                            double step_size = v / a; // (f / j) / (f / j^2) = f / j / f * j * j = j
+                            if (canceled) break;
 
-                            // double v1 = (f2 - f1) / dp;
-                            // double v2 = (f3 - f2) / dp;
-                            // double v = (v1 + v2) * 0.5;
-                            // double a = (v2 - v1) / dp;
-                            // // v * x + a * x * x = 0;
-                            // // v = - a * x
-                            // // - v / a = x
-                            // // x = -v / a;
-                            // double step_size = -v / a / dp;
+                            // compute gradient
+                            temp = individual.genes;
+                            genotypes[0] = temp.data();
+                            model.computeApproximateMutations(1, genotypes.data(), phenotypes2);
+                            double f2p = computeFitnessActiveVariables(phenotypes2[0], genotypes[0]);
+                            double fa = f2p + computeSecondaryFitnessActiveVariables(genotypes[0]);
+                            for (size_t i = 0; i < problem.active_variables.size(); i++) {
+                                double *pp = &(genotypes[0][i]);
+                                genotypes[0][i] = individual.genes[i] + dp;
+                                model.computeApproximateMutation1(problem.active_variables[i], +dp, phenotypes2[0],
+                                                                  phenotypes3[0]);
+                                double fb = computeCombinedFitnessActiveVariables(phenotypes3[0], genotypes[0]);
+                                genotypes[0][i] = individual.genes[i];
+                                double d = fb - fa;
+                                gradient[i] = d;
+                            }
 
-                            // for(double f : { 1.0, 0.5, 0.25 })
-                            {
+                            // normalize gradient
+                            double sum = dp * dp;
+                            for (size_t i = 0; i < problem.active_variables.size(); i++)
+                                sum += fabs(gradient[i]);
+                            double f = 1.0 / sum * dp;
+                            for (size_t i = 0; i < problem.active_variables.size(); i++)
+                                gradient[i] *= f;
 
-                                double f = 1.0;
+                            // sample support points for line search
+                            for (size_t i = 0; i < problem.active_variables.size(); i++)
+                                genotypes[0][i] = individual.genes[i] - gradient[i];
+                            model.computeApproximateMutations(1, genotypes.data(), phenotypes3);
+                            double f1 = computeCombinedFitnessActiveVariables(phenotypes3[0], genotypes[0]);
+
+                            double f2 = fa;
+
+                            for (size_t i = 0; i < problem.active_variables.size(); i++)
+                                genotypes[0][i] = individual.genes[i] + gradient[i];
+                            model.computeApproximateMutations(1, genotypes.data(), phenotypes3);
+                            double f3 = computeCombinedFitnessActiveVariables(phenotypes3[0], genotypes[0]);
+
+                            // quadratic step size
+                            if (memetic == 'q') {
+
+                                // compute step size
+                                double v1 = (f2 - f1); // f / j
+                                double v2 = (f3 - f2); // f / j
+                                double v = (v1 + v2) * 0.5; // f / j
+                                double a = (v1 - v2); // f / j^2
+                                double step_size = v / a; // (f / j) / (f / j^2) = f / j / f * j * j = j
+
+                                // double v1 = (f2 - f1) / dp;
+                                // double v2 = (f3 - f2) / dp;
+                                // double v = (v1 + v2) * 0.5;
+                                // double a = (v2 - v1) / dp;
+                                // // v * x + a * x * x = 0;
+                                // // v = - a * x
+                                // // - v / a = x
+                                // // x = -v / a;
+                                // double step_size = -v / a / dp;
+
+                                // for(double f : { 1.0, 0.5, 0.25 })
+                                {
+
+                                    double f = 1.0;
+
+                                    // move by step size along gradient and compute fitness
+                                    for (size_t i = 0; i < problem.active_variables.size(); i++)
+                                        genotypes[0][i] = modelInfo.clip(
+                                                individual.genes[i] + gradient[i] * step_size * f,
+                                                problem.active_variables[i]);
+                                    model.computeApproximateMutations(1, genotypes.data(), phenotypes2);
+                                    double f4p = computeFitnessActiveVariables(phenotypes2[0], genotypes[0]);
+
+                                    // accept new position if better
+                                    if (f4p < f2p) {
+                                        individual.genes = temp;
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                // break;
+                            }
+
+                            // linear step size
+                            if (memetic == 'l') {
+
+                                // compute step size
+                                double cost_diff = (f3 - f1) * 0.5; // f / j
+                                double step_size = f2 / cost_diff; // f / (f / j) = j
 
                                 // move by step size along gradient and compute fitness
-                                for(size_t i = 0; i < problem.active_variables.size(); i++)
-                                    genotypes[0][i] = modelInfo.clip(individual.genes[i] + gradient[i] * step_size * f, problem.active_variables[i]);
+                                for (size_t i = 0; i < problem.active_variables.size(); i++)
+                                    temp[i] = modelInfo.clip(individual.genes[i] - gradient[i] * step_size,
+                                                             problem.active_variables[i]);
                                 model.computeApproximateMutations(1, genotypes.data(), phenotypes2);
                                 double f4p = computeFitnessActiveVariables(phenotypes2[0], genotypes[0]);
 
                                 // accept new position if better
-                                if(f4p < f2p)
-                                {
+                                if (f4p < f2p) {
                                     individual.genes = temp;
                                     continue;
-                                }
-                                else
-                                {
+                                } else {
                                     break;
                                 }
-                            }
-
-                            // break;
-                        }
-
-                        // linear step size
-                        if(memetic == 'l')
-                        {
-
-                            // compute step size
-                            double cost_diff = (f3 - f1) * 0.5; // f / j
-                            double step_size = f2 / cost_diff; // f / (f / j) = j
-
-                            // move by step size along gradient and compute fitness
-                            for(size_t i = 0; i < problem.active_variables.size(); i++)
-                                temp[i] = modelInfo.clip(individual.genes[i] - gradient[i] * step_size, problem.active_variables[i]);
-                            model.computeApproximateMutations(1, genotypes.data(), phenotypes2);
-                            double f4p = computeFitnessActiveVariables(phenotypes2[0], genotypes[0]);
-
-                            // accept new position if better
-                            if(f4p < f2p)
-                            {
-                                individual.genes = temp;
-                                continue;
-                            }
-                            else
-                            {
-                                break;
                             }
                         }
                     }

@@ -84,6 +84,7 @@ struct IKParams
     int species_count;
     int memetic_evolution_gens;
     int memetic_opt_gens;
+    int elite_count2;
 };
 
 // Uncomment to enable logging

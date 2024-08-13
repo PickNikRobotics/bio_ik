@@ -227,6 +227,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
     getRosParam("species_count", ikparams.species_count, 2);
     getRosParam("memetic_evolution_gens", ikparams.memetic_evolution_gens, 8);
     getRosParam("memetic_opt_gens", ikparams.memetic_opt_gens, 8);
+    getRosParam("elite_count2", ikparams.elite_count2, 1);
 
     temp_state.reset(new moveit::core::RobotState(robot_model_));
 
