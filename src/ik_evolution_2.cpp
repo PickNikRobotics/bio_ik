@@ -271,9 +271,14 @@ template <int memetic> struct IKEvolution2 : IKBase
         for(size_t child_index = population.size(); child_index < children.size(); child_index++)
         {
             double mutation_rate = (1 << fast_random_index(16)) * (1.0 / (1 << 23));
-            // todo(timon): this is using fixed parents
-            auto& parent = population[0];
-            auto& parent2 = population[1];
+            // randomly select distinct parents and make parent2 the larger index
+            // this is done to ensure that the same behavior is done as before when population size is 2
+            size_t p1, p2;
+            p1 = fast_random_index(population.size());
+            do { p2 = fast_random_index(population.size()); } while (p1 != p2);
+            if (p1 > p2) std::swap(p1, p2);
+            auto& parent = population[p1];
+            auto& parent2 = population[p2];
             double fmix = (child_index % 2 == 0) * 0.2;
             double gradient_factor = child_index % 3;
 
