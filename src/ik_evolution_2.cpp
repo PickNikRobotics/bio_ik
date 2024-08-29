@@ -259,10 +259,10 @@ template <int memetic> struct IKEvolution2 : IKBase
 
         auto gene_count = children[0].genes.size();
 
-        size_t s = (children.size() - population.size()) * gene_count + children.size() * 4 + 4;
+        size_t s = (children.size() - population.size()) * gene_count + children.size() * 32 + 32;
 
         auto* __restrict__ rr = fast_random_gauss_n(s);
-        rr = (const double*)(((size_t)rr + 3) / 4 * 4);
+        rr = (const double*)(((size_t)rr + 31) / 32 * 32);
 
         /*rmask.resize(s);
         for(auto& m : rmask) m = fast_random() < 0.1 ? 1.0 : 0.0;
@@ -293,7 +293,7 @@ template <int memetic> struct IKEvolution2 : IKBase
             auto __attribute__((aligned(32)))* __restrict__ child_genes = child.genes.data();
             auto __attribute__((aligned(32)))* __restrict__ child_gradients = child.gradients.data();
 
-#pragma omp simd aligned(genes_span : 32), aligned(genes_min : 32), aligned(genes_max : 32), aligned(parent_genes : 32), aligned(parent_gradients : 32), aligned(parent2_genes : 32), aligned(parent2_gradients : 32), aligned(child_genes : 32), aligned(child_gradients : 32) aligned(rr : 32)
+#pragma omp simd aligned(genes_span : 32), aligned(genes_min : 32), aligned(genes_max : 32), aligned(parent_genes : 32), aligned(parent_gradients : 32), aligned(parent2_genes : 32), aligned(parent2_gradients : 32), aligned(child_genes : 32), aligned(child_gradients : 32), aligned(rr : 32)
 #pragma unroll
             for(size_t gene_index = 0; gene_index < gene_count; gene_index++)
             {
@@ -312,7 +312,7 @@ template <int memetic> struct IKEvolution2 : IKBase
                 child_genes[gene_index] = gene;
                 child_gradients[gene_index] = mix(parent_gradient, gene - parent_gene, 0.3);
             }
-            rr += (gene_count + 3) / 4 * 4;
+            rr += (gene_count + 31) / 32 * 32;
             // dm += (gene_count + 3) / 4 * 4;
 
             /*if(problem.tip_link_indices.size() > 1)
