@@ -275,7 +275,7 @@ template <int memetic> struct IKEvolution2 : IKBase
             // this is done to ensure that the same behavior is done as before when population size is 2
             size_t p1, p2;
             p1 = fast_random_index(population.size());
-            do { p2 = fast_random_index(population.size()); } while (p1 != p2);
+            do { p2 = fast_random_index(population.size()); } while (p1 == p2 && population.size() > 1);
             if (p1 > p2) std::swap(p1, p2);
             auto& parent = population[p1];
             auto& parent2 = population[p2];
