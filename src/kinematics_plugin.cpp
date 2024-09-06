@@ -215,11 +215,22 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
     getRosParam("drot", ikparams.drot, DBL_MAX);
     getRosParam("dtwist", ikparams.dtwist, 1e-5);
 
-    // initialize parameters for ik_evolution_1
-    getRosParam("no_wipeout", ikparams.opt_no_wipeout, false);
-    getRosParam("population_size", ikparams.population_size, 8);
-    getRosParam("elite_count", ikparams.elite_count, 4);
-    getRosParam("linear_fitness", ikparams.linear_fitness, false);
+    if (ikparams.solver_class_name == "bio1")
+    {
+        // initialize parameters for ik_evolution_1
+        getRosParam("no_wipeout", ikparams.opt_no_wipeout, false);
+        getRosParam("population_size", ikparams.population_size, 8);
+        getRosParam("elite_count", ikparams.elite_count, 4);
+        getRosParam("linear_fitness", ikparams.linear_fitness, false);
+    } else {
+        // parameters for bio2
+        getRosParam("population_size", ikparams.population_size, 2);
+        getRosParam("child_count", ikparams.child_count, 16);
+        getRosParam("species_count", ikparams.species_count, 2);
+        getRosParam("memetic_evolution_gens", ikparams.memetic_evolution_gens, 8);
+        getRosParam("memetic_opt_gens", ikparams.memetic_opt_gens, 8);
+        getRosParam("elite_count", ikparams.elite_count, 1);
+    }
 
     temp_state.reset(new moveit::core::RobotState(robot_model_));
 
