@@ -72,19 +72,19 @@ struct IKParams
     double drot;
     double dtwist;
 
-    // ik_evolution_1 parameters
-    bool opt_no_wipeout;
+    // common parameters
     int population_size;
     int elite_count;
+
+    // ik_evolution_1 parameters
+    bool opt_no_wipeout;
     bool linear_fitness;
 
     // bio2 parameters
-    int population_size2;
     int child_count;
     int species_count;
     int memetic_evolution_gens;
     int memetic_opt_gens;
-    int elite_count2;
 };
 
 // Uncomment to enable logging

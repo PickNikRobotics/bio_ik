@@ -112,12 +112,12 @@ template <int memetic> struct IKEvolution2 : IKBase
     const std::vector<double>& getSolution() const { return solution; }
 
     void setParams(const IKParams& p) override {
-        population_size = p.population_size2;
+        population_size = p.population_size;
         child_count = p.child_count;
         species_count = p.species_count;
         memetic_opt_gens = p.memetic_opt_gens;
         memetic_evolution_gens = p.memetic_evolution_gens;
-        elite_count = std::min(p.elite_count2, p.population_size2);
+        elite_count = std::min(p.elite_count, p.population_size);
     }
 
     void initialize(const Problem& problem)
