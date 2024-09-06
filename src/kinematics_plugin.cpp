@@ -509,95 +509,103 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
       }
     }
 
-    {
-      BLOCKPROFILER("ik init");
-      ik->initialize(problem);
-    }
+    while (std::chrono::system_clock::now() < problem.timeout) {
+      {
+        BLOCKPROFILER("ik init");
+        ik->initialize(problem);
+      }
 
-    // run ik solver
-    {
-      BLOCKPROFILER("ik_solve");
-      ik->solve();
-    }
+      // run ik solver
+      {
+        BLOCKPROFILER("ik_solve");
+        ik->solve();
+      }
 
-    // get solution
-    state = ik->getSolution();
+      // get solution
+      state = ik->getSolution();
 
-    // wrap angles
-    for (auto ivar : problem.active_variables) {
-      auto v = state[ivar];
-      if (robot_info.isRevolute(ivar) &&
-          robot_model_->getMimicJointModels().empty()) {
-        auto r = problem.initial_guess[ivar];
-        auto lo = robot_info.getMin(ivar);
-        auto hi = robot_info.getMax(ivar);
+      // wrap angles
+      for (auto ivar : problem.active_variables) {
+        auto v = state[ivar];
+        if (robot_info.isRevolute(ivar) &&
+            robot_model_->getMimicJointModels().empty()) {
+          auto r = problem.initial_guess[ivar];
+          auto lo = robot_info.getMin(ivar);
+          auto hi = robot_info.getMax(ivar);
 
-        // move close to initial guess
-        if (r < v - M_PI || r > v + M_PI) {
-          v -= r;
-          v /= (2 * M_PI);
-          v += 0.5;
-          v -= std::floor(v);
-          v -= 0.5;
-          v *= (2 * M_PI);
-          v += r;
+          // move close to initial guess
+          if (r < v - M_PI || r > v + M_PI) {
+            v -= r;
+            v /= (2 * M_PI);
+            v += 0.5;
+            v -= std::floor(v);
+            v -= 0.5;
+            v *= (2 * M_PI);
+            v += r;
+          }
+
+          // wrap at joint limits
+          if (v > hi)
+            v -= std::ceil(std::max(0.0, v - hi) / (2 * M_PI)) * (2 * M_PI);
+          if (v < lo)
+            v += std::ceil(std::max(0.0, lo - v) / (2 * M_PI)) * (2 * M_PI);
+
+          // clamp at edges
+          if (v < lo)
+            v = lo;
+          if (v > hi)
+            v = hi;
         }
-
-        // wrap at joint limits
-        if (v > hi)
-          v -= std::ceil(std::max(0.0, v - hi) / (2 * M_PI)) * (2 * M_PI);
-        if (v < lo)
-          v += std::ceil(std::max(0.0, lo - v) / (2 * M_PI)) * (2 * M_PI);
-
-        // clamp at edges
-        if (v < lo)
-          v = lo;
-        if (v > hi)
-          v = hi;
+        state[ivar] = v;
       }
-      state[ivar] = v;
-    }
 
-    // wrap angles
-    robot_model_->enforcePositionBounds(state.data());
+      // wrap angles
+      robot_model_->enforcePositionBounds(state.data());
 
-    // map result to jointgroup variables
-    {
-      solution.clear();
-      for (auto &joint_name : getJointNames()) {
-        auto *joint_model = robot_model_->getJointModel(joint_name);
-        if (!joint_model)
-          continue;
-        for (size_t vi = 0; vi < joint_model->getVariableCount(); vi++)
-          solution.push_back(
-              state.at(joint_model->getFirstVariableIndex() + vi));
+      // map result to jointgroup variables
+      {
+        solution.clear();
+        for (auto &joint_name : getJointNames()) {
+          auto *joint_model = robot_model_->getJointModel(joint_name);
+          if (!joint_model)
+            continue;
+          for (size_t vi = 0; vi < joint_model->getVariableCount(); vi++)
+            solution.push_back(
+                state.at(joint_model->getFirstVariableIndex() + vi));
+        }
+      }
+
+      // set solution fitness
+      if (bio_ik_options) {
+        bio_ik_options->solution_fitness = ik->getSolutionFitness();
+      }
+
+      // return an error if an accurate solution was requested, but no accurate
+      // solution was found
+      if (!ik->getSuccess() && !options.return_approximate_solution) {
+        error_code.val = error_code.NO_IK_SOLUTION;
+        return false;
+      }
+
+      // callback?
+      if (solution_callback) {
+        // run callback
+        solution_callback(ik_poses.front(), solution, error_code);
+
+        // return success if callback has accepted the solution
+        if (error_code.val == error_code.SUCCESS) {
+          return true;
+        } else {
+          robot_model_->getVariableRandomPositions(temp_state->getRandomNumberGenerator(), state);
+          problem.initial_guess = state;
+        }
+      } else {
+        // return success
+        error_code.val = error_code.SUCCESS;
+        return true;
       }
     }
-
-    // set solution fitness
-    if (bio_ik_options) {
-      bio_ik_options->solution_fitness = ik->getSolutionFitness();
-    }
-
-    // return an error if an accurate solution was requested, but no accurate
-    // solution was found
-    if (!ik->getSuccess() && !options.return_approximate_solution) {
-      error_code.val = error_code.NO_IK_SOLUTION;
-      return false;
-    }
-
-    // callback?
-    if (solution_callback) {
-      // run callback
-      solution_callback(ik_poses.front(), solution, error_code);
-
-      // return success if callback has accepted the solution
-      return error_code.val == error_code.SUCCESS;
-    } else {
-      // return success
-      error_code.val = error_code.SUCCESS;
-      return true;
-    }
+    return false;
   }
 
   virtual bool supportsGroup(const moveit::core::JointModelGroup *jmg,
